@@ -1,0 +1,54 @@
+syntax = "proto3";
+package location;
+option go_package = "github.com/ridego/proto/location";
+
+// LocationService is consumed internally by the Matching Service over gRPC.
+// It is never exposed through the public API Gateway.
+service LocationService {
+  // NearbyDrivers returns active drivers within radius_km of a point.
+  rpc NearbyDrivers     (NearbyRequest)  returns (NearbyResponse);
+
+  // GetDriverLocation returns the last known position of a single driver.
+  rpc GetDriverLocation (DriverRequest)  returns (DriverPosition);
+
+   // UpdateLocation is called by the driver app beacon (HTTP alternative path).
+  rpc UpdateLocation    (LocationUpdate) returns (Ack);
+
+}
+
+message NearbyRequest {
+  double lat = 1;
+  double lng = 2;
+  double radius_km = 3;
+  int32 limit = 4;  // max drivers to return (default 10)
+}
+
+message NearbyResponse {
+  repeated DriverPosition drivers = 1;
+}
+
+message DriverPosition {
+  string driver_id   = 1;
+  double lat         = 2;
+  double lng         = 3;
+  double distance_km = 4;
+  float  rating      = 5;
+  bool   is_online   = 6;
+}
+
+message DriverRequest {
+  string driver_id = 1;
+}
+
+message LocationUpdate {
+  string driver_id = 1;
+  double lat       = 2;
+  double lng       = 3;
+  float  heading   = 4;
+  float  speed_kmh = 5;
+}
+
+message Ack {
+  bool   ok      = 1;
+  string message = 2;
+}

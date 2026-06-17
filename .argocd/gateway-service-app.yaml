@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway-service
+  namespace: argocd
+spec:
+  project: ridego
+
+  source:
+    repoURL: https://github.com
+    targetRevision: main
+    path: infra/k8s/services/gateway
+
+  destination:
+    server: https://default.svc
+    namespace: ridego
+
+  syncPolicy:
+    automated:
+      prune: true       
+      selfHeal: true    
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

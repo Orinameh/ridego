@@ -1,0 +1,24 @@
+# env files — never commit real secrets
+**/.env
+*.pem
+
+# Go build output
+bin/
+*.exe
+
+# Go test cache
+**/*.test
+
+# OpenTofu state — contains secrets
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars        # prod.tfvars has real passwords
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/

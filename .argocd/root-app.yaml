@@ -1,0 +1,30 @@
+# Apply this ONE file to bootstrap ArgoCD management of the entire
+# RideGo platform. ArgoCD will then discover and create every
+# Application manifest in .argocd/*.yaml automatically.
+#
+#   kubectl apply -f .argocd/root-app.yaml
+#
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ridego-root
+  namespace: argocd
+spec:
+  project: ridego
+
+  source:
+    repoURL: https://github.com/orinameh/ridego
+    targetRevision: main
+    path: .argocd
+    directory:
+      include: "*-app.yaml"
+      exclude: "root-app.yaml"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trip-service
+  namespace: ridego
+  labels:
+    app: trip-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: trip-service
+  template:
+    metadata:
+      labels:
+        app: trip-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      containers:
+        - name: trip-service
+          image: ghcr.io/orinameh/ridego-trip-service:latest
+          ports:
+            - name: http
+              containerPort: 6002
+          envFrom:
+            - secretRef:
+                name: trip-service-secrets
+            - configMapRef:
+                name: ridego-config
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 6002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 6002
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trip-service
+  namespace: ridego
+spec:
+  selector:
+    app: trip-service
+  ports:
+    - name: http
+      port: 6002
+      targetPort: 6002
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: trip-service-hpa
+  namespace: ridego
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: trip-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
