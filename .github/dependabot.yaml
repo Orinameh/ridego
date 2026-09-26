@@ -1,76 +1,21 @@
-# Keep third-party actions, base images, and Go modules on current versions.
+# Weekly Go module bumps, batched into a SINGLE PR.
 #
-# Cost control matters here: without grouping, one weekly check fans out
-# into ~9+ PRs (one per directory), and every PR runs the full CI matrix
-# (go + 6 docker builds + manifests + tofu ≈ 25-35 billed minutes each).
-# Same-named `groups` across directories collapse into a single PR, and
-# `open-pull-requests-limit` caps the backlog — so a weekly batch costs
-# ~3 CI runs instead of ~9+.
+# Cost control: every PR runs the full CI matrix (go + 6 docker builds +
+# manifests + tofu ≈ 25-35 billed minutes). One `groups` name across all
+# directories collapses the whole weekly batch into one PR.
+#
+# Deliberately gomod-only: Dependabot cannot combine ecosystems, so watching
+# docker + github-actions too would mean 3 PRs minimum. The Golang base
+# image and the handful of action pins change rarely — bump those by hand
+# when needed (docker: edit the FROM line in services/*/Dockerfile;
+# actions: edit .github/workflows/*.yaml; CI validates both).
 version: 2
 updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      actions:
-        patterns: ['*']
-
-  - package-ecosystem: docker
-    directory: /services/gateway
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      base-images:
-        patterns: ['*']
-  - package-ecosystem: docker
-    directory: /services/user
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      base-images:
-        patterns: ['*']
-  - package-ecosystem: docker
-    directory: /services/trip
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      base-images:
-        patterns: ['*']
-  - package-ecosystem: docker
-    directory: /services/location
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      base-images:
-        patterns: ['*']
-  - package-ecosystem: docker
-    directory: /services/matching
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      base-images:
-        patterns: ['*']
-  - package-ecosystem: docker
-    directory: /services/payment
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      base-images:
-        patterns: ['*']
-
   - package-ecosystem: gomod
     directory: /pkg
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
       go-modules:
         patterns: ['*']
@@ -78,7 +23,7 @@ updates:
     directory: /proto
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
       go-modules:
         patterns: ['*']
@@ -86,7 +31,7 @@ updates:
     directory: /services/gateway
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
       go-modules:
         patterns: ['*']
@@ -94,7 +39,7 @@ updates:
     directory: /services/user
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
       go-modules:
         patterns: ['*']
@@ -102,7 +47,7 @@ updates:
     directory: /services/trip
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
       go-modules:
         patterns: ['*']
@@ -110,7 +55,7 @@ updates:
     directory: /services/location
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
       go-modules:
         patterns: ['*']
@@ -118,7 +63,7 @@ updates:
     directory: /services/matching
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
       go-modules:
         patterns: ['*']
@@ -126,7 +71,7 @@ updates:
     directory: /services/payment
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
       go-modules:
         patterns: ['*']

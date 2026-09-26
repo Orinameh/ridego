@@ -410,8 +410,9 @@ make k8s-dev-down
   tags back into `infra/k8s/` on `main` for ArgoCD to sync. Packages pushed
   with `GITHUB_TOKEN` default to private on GHCR — flip them public or add
   an `imagePullSecret`.
-- **Dependabot** (`.github/dependabot.yaml`) proposes weekly bumps for
-  GitHub Actions, Docker base images, and Go modules.
+- **Dependabot** (`.github/dependabot.yaml`) proposes one grouped Go-module
+  bump PR per week (a single PR keeps CI cost flat). Docker base images and
+  action pins are bumped by hand when needed — CI validates both.
 
 ## Cloud deployment (optional, AWS)
 
