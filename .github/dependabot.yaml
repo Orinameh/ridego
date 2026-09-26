@@ -1,65 +1,132 @@
 # Keep third-party actions, base images, and Go modules on current versions.
+#
+# Cost control matters here: without grouping, one weekly check fans out
+# into ~9+ PRs (one per directory), and every PR runs the full CI matrix
+# (go + 6 docker builds + manifests + tofu ≈ 25-35 billed minutes each).
+# Same-named `groups` across directories collapse into a single PR, and
+# `open-pull-requests-limit` caps the backlog — so a weekly batch costs
+# ~3 CI runs instead of ~9+.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ['*']
 
   - package-ecosystem: docker
     directory: /services/gateway
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      base-images:
+        patterns: ['*']
   - package-ecosystem: docker
     directory: /services/user
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      base-images:
+        patterns: ['*']
   - package-ecosystem: docker
     directory: /services/trip
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      base-images:
+        patterns: ['*']
   - package-ecosystem: docker
     directory: /services/location
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      base-images:
+        patterns: ['*']
   - package-ecosystem: docker
     directory: /services/matching
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      base-images:
+        patterns: ['*']
   - package-ecosystem: docker
     directory: /services/payment
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      base-images:
+        patterns: ['*']
 
   - package-ecosystem: gomod
     directory: /pkg
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-modules:
+        patterns: ['*']
   - package-ecosystem: gomod
     directory: /proto
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-modules:
+        patterns: ['*']
   - package-ecosystem: gomod
     directory: /services/gateway
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-modules:
+        patterns: ['*']
   - package-ecosystem: gomod
     directory: /services/user
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-modules:
+        patterns: ['*']
   - package-ecosystem: gomod
     directory: /services/trip
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-modules:
+        patterns: ['*']
   - package-ecosystem: gomod
     directory: /services/location
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-modules:
+        patterns: ['*']
   - package-ecosystem: gomod
     directory: /services/matching
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-modules:
+        patterns: ['*']
   - package-ecosystem: gomod
     directory: /services/payment
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      go-modules:
+        patterns: ['*']
