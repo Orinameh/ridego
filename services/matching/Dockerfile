@@ -1,5 +1,5 @@
 # ---- build stage ----
-FROM golang:1.26.8-alpine3.24 AS builder
+FROM golang:1.27.1-alpine3.24 AS builder
 
 # Accept the service name as a dynamic build argument
 ARG SERVICE_NAME
