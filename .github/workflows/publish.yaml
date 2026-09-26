@@ -55,7 +55,7 @@ jobs:
       # Immutable tag derived from the tagged commit — never :latest.
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/orinameh/ridego-${{ matrix.service }}
           tags: type=sha,prefix=sha-,format=short
