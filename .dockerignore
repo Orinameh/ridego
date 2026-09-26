@@ -1,0 +1,15 @@
+# Keep secrets and VCS metadata out of the build context.
+# (COPY . . only ships files referenced by later COPY/RUN steps, but a lean
+# context is faster to upload and avoids leaking secrets into layer caches.)
+**/.env
+*.pem
+*.tfvars
+.git/
+**/bin/
+**/*.test
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,16 @@
+# Shared, NON-SENSITIVE configuration for the dev overlay.
+#
+# There are intentionally NO Secret resources in git — not even dev-only
+# ones. All per-service secrets (DATABASE_URLs, JWT keypair, STRIPE_KEY)
+# are provisioned at deploy time by `make k8s-secrets` (called from
+# `make k8s-dev`) and live only in the cluster / your gitignored .env files.
+# Prod secrets come from the infra/tofu k8s-secrets module instead.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ridego-config
+  namespace: ridego
+data:
+  NATS_URL: "nats://nats.ridego.svc.cluster.local:4222"
+  REDIS_ADDR: "redis.ridego.svc.cluster.local:6379"
+  LOG_LEVEL: "debug"

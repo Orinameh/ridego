@@ -66,7 +66,7 @@ variable "rds_instance_class" {
 variable "rds_databases" {
   description = "List of database names to create on the shared RDS instance"
   type        = list(string)
-  default     = ["users_db", "trips_db", "payments_db"]
+  default     = ["users_db", "trips_db", "payment_db"]
 }
 
 variable "rds_master_password" {

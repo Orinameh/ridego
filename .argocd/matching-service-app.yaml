@@ -7,18 +7,18 @@ spec:
   project: ridego
 
   source:
-    repoURL: https://github.com
+    repoURL: https://github.com/orinameh/ridego
     targetRevision: main
     path: infra/k8s/services/matching
 
   destination:
-    server: https://default.svc
+    server: https://kubernetes.default.svc
     namespace: ridego
 
   syncPolicy:
     automated:
-      prune: true       
-      selfHeal: true    
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
     retry:

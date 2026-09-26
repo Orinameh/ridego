@@ -1,0 +1,81 @@
+# Local-development overlay for kind / minikube.
+#
+# Usage:
+#   make k8s-dev          # build :dev images, load into the cluster, apply this overlay
+#   make k8s-dev-down     # tear it back down
+#
+# Differences from prod:
+#   - Images come from the local daemon (`ridego-<svc>:dev`), not GHCR.
+#   - Single replicas, relaxed autoscaling (no metrics-server locally).
+#   - Ingress targets the nginx controller instead of the AWS ALB.
+#   - Backing services (Postgres, Redis) run in-cluster; NATS comes from base.
+#   - The ridego-config ConfigMap ships non-sensitive values only.
+#     Per-service Secrets are provisioned by `make k8s-secrets` and are
+#     never committed to git.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - ../../services
+  - postgres.yaml
+  - redis.yaml
+  - dev-config.yaml
+
+images:
+  - name: ghcr.io/orinameh/ridego-gateway
+    newName: ridego-gateway
+    newTag: dev
+  - name: ghcr.io/orinameh/ridego-user
+    newName: ridego-user
+    newTag: dev
+  - name: ghcr.io/orinameh/ridego-trip
+    newName: ridego-trip
+    newTag: dev
+  - name: ghcr.io/orinameh/ridego-location
+    newName: ridego-location
+    newTag: dev
+  - name: ghcr.io/orinameh/ridego-matching
+    newName: ridego-matching
+    newTag: dev
+  - name: ghcr.io/orinameh/ridego-payment
+    newName: ridego-payment
+    newTag: dev
+
+replicas:
+  - name: gateway
+    count: 1
+  - name: user-service
+    count: 1
+  - name: trip-service
+    count: 1
+  - name: location-service
+    count: 1
+  - name: matching-service
+    count: 1
+  - name: payment-service
+    count: 1
+
+patches:
+  # No metrics-server on kind/minikube — keep autoscaling dormant but valid.
+  - target:
+      kind: HorizontalPodAutoscaler
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 2
+  # Route the gateway through a local nginx ingress controller instead of the
+  # AWS ALB (minikube: `minikube addons enable ingress`; kind: install ingress-nginx).
+  - target:
+      kind: Ingress
+      name: gateway-ingress
+    patch: |-
+      - op: replace
+        path: /metadata/annotations/kubernetes.io~1ingress.class
+        value: nginx
+      - op: add
+        path: /spec/ingressClassName
+        value: nginx

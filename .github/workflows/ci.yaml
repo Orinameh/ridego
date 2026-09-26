@@ -1,0 +1,156 @@
+# Continuous integration: fast feedback on every PR and every merge to main.
+# Heavyweight publishing lives in publish.yaml; this workflow only validates.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------- Go ---
+  go:
+    name: go fmt/vet/build/test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.work
+          cache-dependency-path: |
+            **/go.sum
+
+      - name: Sync workspace
+        run: go work sync
+
+      - name: Check formatting
+        run: test -z "$(gofmt -l services pkg proto)"
+
+      # One loop per step so logs show exactly which module failed.
+      - name: go vet
+        run: |
+          for m in pkg proto services/gateway services/user services/trip services/location services/matching services/payment; do
+            echo "--- vet $m ---"
+            (cd "$m" && go vet ./...)
+          done
+
+      - name: go build
+        run: |
+          for m in pkg proto services/gateway services/user services/trip services/location services/matching services/payment; do
+            echo "--- build $m ---"
+            (cd "$m" && go build ./...)
+          done
+
+      - name: go test
+        run: |
+          for m in pkg proto services/gateway services/user services/trip services/location services/matching services/payment; do
+            echo "--- test $m ---"
+            (cd "$m" && go test ./... -count=1)
+          done
+
+  # ----------------------------------------------------------- Docker ---
+  # Rebuilds every service image (without pushing) so Dockerfile breakage
+  # is caught on PRs, not at release time.
+  docker:
+    name: docker build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [gateway, user, trip, location, matching, payment]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          build-args: SERVICE_NAME=${{ matrix.service }}
+          push: false
+
+  # -------------------------------------------------------- Manifests ---
+  manifests:
+    name: kustomize + kubeconform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/kustomize
+          kustomize version
+
+      - name: Install kubeconform
+        run: |
+          KUBECONFORM_VERSION=0.8.0
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar xz -C /tmp kubeconform
+          sudo mv /tmp/kubeconform /usr/local/bin/kubeconform
+          kubeconform -v
+
+      - name: Build and validate dev overlay
+        run: |
+          kustomize build infra/k8s/overlays/dev > /tmp/dev.yaml
+          kubeconform -summary /tmp/dev.yaml
+
+      - name: Build and validate prod overlay
+        run: |
+          kustomize build infra/k8s/overlays/prod > /tmp/prod.yaml
+          kubeconform -summary /tmp/prod.yaml
+
+      # ArgoCD Applications are CRDs (no public schema), so only check that
+      # every document parses as YAML with the required top-level fields.
+      - name: Lint ArgoCD manifests
+        run: |
+          python3 - <<'EOF'
+          import sys, yaml, glob
+          ok = True
+          for path in sorted(glob.glob('.argocd/*.yaml')):
+              with open(path) as f:
+                  for doc in yaml.safe_load_all(f):
+                      if not doc:
+                          continue
+                      kind = doc.get('kind')
+                      meta = doc.get('metadata', {})
+                      spec = doc.get('spec', {})
+                      valid = kind in ('Application', 'AppProject') and meta.get('name') and spec
+                      print(('OK   ' if valid else 'FAIL ') + path + ' kind=' + str(kind))
+                      ok = ok and valid
+          sys.exit(0 if ok else 1)
+          EOF
+
+  # ------------------------------------------------------------- Tofu ---
+  # fmt + init (no backend) + validate needs no AWS credentials, so it runs
+  # on every PR. `tofu plan/apply` stays manual — see infra/tofu/README.
+  tofu:
+    name: tofu fmt/validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/tofu
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: opentofu/setup-opentofu@v1
+
+      - name: Check formatting
+        run: tofu fmt -check -recursive -diff
+
+      - name: Init (no backend)
+        run: tofu init -backend=false -input=false
+
+      - name: Validate
+        run: tofu validate

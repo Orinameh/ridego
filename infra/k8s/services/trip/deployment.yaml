@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: trip-service
-          image: ghcr.io/orinameh/ridego-trip-service:latest
+          image: ghcr.io/orinameh/ridego-trip:latest # placeholder until the first rel-* release pins a sha-* tag (see Publish workflow)
           ports:
             - name: http
               containerPort: 6002

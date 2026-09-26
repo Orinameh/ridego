@@ -1,5 +1,5 @@
 # ---- build stage ----
-FROM golang:1.26.10-alpine3.19 AS builder
+FROM golang:1.26.8-alpine3.24 AS builder
 
 # Accept the service name as a dynamic build argument
 ARG SERVICE_NAME
@@ -7,14 +7,22 @@ WORKDIR /app
 
 # Cache dependency layer separately
 COPY go.work go.work.sum ./
-COPY services/${SERVICE_NAME}/go.mod services/${SERVICE_NAME}/go.sum ./services/${SERVICE_NAME}/
+# go.work references every module, so `go work sync` needs ALL go.mod
+# files present — not just the target service's. (Sources follow later.)
+COPY services/gateway/go.mod services/gateway/go.sum ./services/gateway/
+COPY services/user/go.mod services/user/go.sum ./services/user/
+COPY services/trip/go.mod services/trip/go.sum ./services/trip/
+COPY services/location/go.mod services/location/go.sum ./services/location/
+COPY services/matching/go.mod services/matching/go.sum ./services/matching/
+COPY services/payment/go.mod services/payment/go.sum ./services/payment/
+COPY proto/go.mod proto/go.sum ./proto/
 COPY pkg/go.mod pkg/go.sum ./pkg/
 RUN go work sync
 
 COPY . .
 
-# Payment Service does not use gRPC/proto — no protoc step needed here.
-# (Location and Matching Dockerfiles include the protoc regen block instead.)
+# Matching calls Location over gRPC, so it compiles against the committed
+# generated code in proto/. No protoc step needed here.
 
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s" \
@@ -28,8 +36,7 @@ ARG SERVICE_NAME
 
 COPY --from=builder /out/service-binary /service-binary
 
-# Bake in migrations matching the target service
-COPY --from=builder /app/services/${SERVICE_NAME}/migrations /migrations
+# Matching owns no database — no migrations to bake in.
 
 EXPOSE 6004
 ENTRYPOINT ["/service-binary"]

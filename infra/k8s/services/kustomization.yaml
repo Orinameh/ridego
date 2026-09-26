@@ -1,0 +1,12 @@
+# Aggregates every RideGo microservice. Both overlays (dev/prod) and the
+# ArgoCD plain-directory syncs build on top of these base manifests.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - gateway/deployment.yaml
+  - user/deployment.yaml
+  - trip/deployment.yaml
+  - location/deployment.yaml
+  - matching/deployment.yaml
+  - payment/deployment.yaml

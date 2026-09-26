@@ -34,8 +34,7 @@ ARG SERVICE_NAME
 
 COPY --from=builder /out/service-binary /service-binary
 
-# 3. Dynamically bake in the migrations matching the target service
-COPY --from=builder /app/services/${SERVICE_NAME}/migrations /migrations
+# Gateway owns no database — no migrations to bake in.
 
-EXPOSE 6002
+EXPOSE 8080
 ENTRYPOINT ["/service-binary"]

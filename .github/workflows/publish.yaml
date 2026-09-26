@@ -1,0 +1,110 @@
+# Production release pipeline: cutting a `rel-*` tag (e.g. `rel-2026-09-27.1`)
+# builds ALL service images, pushes them to GHCR tagged immutably by commit
+# SHA (`sha-<short>`), then pins the new tags back into infra/k8s on main so
+# ArgoCD syncs exactly what CI built. No `:latest` anywhere — every deploy is
+# traceable to one commit, and the release tag ↔ image SHA mapping lives in
+# the pin commit message.
+#
+# Local kind/minikube testing does NOT use this workflow — see `make k8s-dev`,
+# which builds `:dev` images straight into the local cluster.
+#
+# NOTE: packages pushed with GITHUB_TOKEN default to *private* on GHCR, even
+# in public repos. Either flip each ridego-* package to public
+# (ghcr.io → package settings) or add an imagePullSecret to the Deployments.
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'rel-*'
+
+permissions:
+  contents: write # push the manifest-pin commit back to main
+  packages: write # push images to GHCR
+  attestations: write # build provenance attestations
+  id-token: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false # never cancel a half-published release
+
+env:
+  SERVICES: gateway user trip location matching payment
+
+jobs:
+  # -------------------------------------------------- Build + push ---
+  build:
+    name: build+push ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [gateway, user, trip, location, matching, payment]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Immutable tag derived from the tagged commit — never :latest.
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/orinameh/ridego-${{ matrix.service }}
+          tags: type=sha,prefix=sha-,format=short
+          flavor: latest=false
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          build-args: SERVICE_NAME=${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=ridego-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=ridego-${{ matrix.service }}
+
+  # ------------------------------------------------- Pin manifests ---
+  # Write the new immutable tags into infra/k8s on main (the GitOps source
+  # of truth). The `[skip ci]` trailer keeps this commit from re-running CI,
+  # and Publish only triggers on tags, so the pin commit can never loop.
+  update-manifests:
+    name: pin image tags in manifests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Pin sha tags
+        run: |
+          TAG="sha-$(echo "$GITHUB_SHA" | cut -c1-7)"
+          echo "Release ${{ github.ref_name }} → pinning images to $TAG"
+          for svc in ${{ env.SERVICES }}; do
+            file="infra/k8s/services/$svc/deployment.yaml"
+            sed -i -E "s|^( *image: ghcr.io/orinameh/ridego-$svc:)[^[:space:]]+|\1$TAG|" "$file"
+            grep -H "image:" "$file"
+          done
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "Manifests already pinned — nothing to commit."
+            exit 0
+          fi
+          git add infra/k8s/services/*/deployment.yaml
+          git commit -m "chore(images): ${{ github.ref_name }} pins services to ${{ env.TAG }} [skip ci]"
+          git push

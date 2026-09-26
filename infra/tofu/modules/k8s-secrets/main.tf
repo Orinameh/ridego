@@ -1,13 +1,15 @@
 locals {
   db_to_svc = {
-    users_db    = "user-service"
-    trips_db    = "trip-service"
-    payments_db = "payment-service"
+    users_db   = "user-service"
+    trips_db   = "trip-service"
+    payment_db = "payment-service"
   }
 }
 
 resource "kubernetes_secret" "db" {
-  for_each = var.rds_endpoints
+  # for_each keys must be non-sensitive: iterate the (non-secret) db names
+  # and look the sensitive endpoint values up inside the block.
+  for_each = toset(nonsensitive(keys(var.rds_endpoints)))
 
   metadata {
     name      = "${local.db_to_svc[each.key]}-secrets"
@@ -15,7 +17,7 @@ resource "kubernetes_secret" "db" {
   }
 
   data = {
-    DATABASE_URL = replace(each.value, "REDACTED", var.rds_master_password)
+    DATABASE_URL = replace(var.rds_endpoints[each.key], "REDACTED", var.rds_master_password)
   }
 
   type = "Opaque"

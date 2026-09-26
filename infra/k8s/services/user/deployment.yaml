@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: ghcr.io/orinameh/ridego-user-service:latest # updated by CI on each release
+          image: ghcr.io/orinameh/ridego-user:latest # placeholder until the first rel-* release pins a sha-* tag (see Publish workflow)
           ports:
             - name: http
               containerPort: 6001

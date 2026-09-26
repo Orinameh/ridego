@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: gateway-service
+  name: user-service
   namespace: argocd
 spec:
   project: ridego
@@ -9,7 +9,7 @@ spec:
   source:
     repoURL: https://github.com/orinameh/ridego
     targetRevision: main
-    path: infra/k8s/services/gateway
+    path: infra/k8s/services/user
 
   destination:
     server: https://kubernetes.default.svc

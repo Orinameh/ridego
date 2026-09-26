@@ -23,7 +23,7 @@ resource "aws_subnet" "public" {
   availability_zone       = local.azs[count.index]
   map_public_ip_on_launch = true
   tags = {
-    Name                   = "${var.project}-${var.env}-public-${local.azs[count.index]}"
+    Name                     = "${var.project}-${var.env}-public-${local.azs[count.index]}"
     "kubernetes.io/role/elb" = "1"
   }
 }
@@ -34,7 +34,7 @@ resource "aws_subnet" "private" {
   cidr_block        = local.private_cidrs[count.index]
   availability_zone = local.azs[count.index]
   tags = {
-    Name                            = "${var.project}-${var.env}-private-${local.azs[count.index]}"
+    Name                              = "${var.project}-${var.env}-private-${local.azs[count.index]}"
     "kubernetes.io/role/internal-elb" = "1"
   }
 }

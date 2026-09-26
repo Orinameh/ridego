@@ -47,6 +47,14 @@ resource "aws_db_instance" "this" {
   storage_type          = "gp3"
   storage_encrypted     = true
 
+  # NOTE: no db_name is set on purpose — RDS then creates only the default
+  # `postgres` database. The per-service logical databases (var.databases)
+  # must be created after apply, before workloads start, e.g.:
+  #   psql -h <endpoint> -U ridego_master -d postgres \
+  #     -c "CREATE DATABASE users_db" -c "CREATE DATABASE trips_db" \
+  #     -c "CREATE DATABASE payment_db"
+  # followed by `make migrate-up service=<svc>` per service.
+
   username = "ridego_master"
   password = var.master_password
 
@@ -73,7 +81,7 @@ resource "aws_db_instance" "this" {
 resource "aws_iam_role" "rds_monitoring" {
   name = "${var.project}-${var.env}-rds-monitoring"
   assume_role_policy = jsonencode({
-    Version   = "2012-10-17"
+    Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
       Principal = { Service = "monitoring.rds.amazonaws.com" }

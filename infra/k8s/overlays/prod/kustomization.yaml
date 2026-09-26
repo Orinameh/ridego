@@ -1,0 +1,12 @@
+# Production overlay: the base manifests already carry prod-grade settings
+# (replicas, resource requests/limits, ALB ingress). CI pins each image to an
+# immutable `sha-*` tag on every release; ArgoCD syncs the result.
+#
+# Secrets (per-service `*-secrets`) and the `ridego-config` ConfigMap are NOT
+# stored here — in AWS they are injected by the infra/tofu k8s-secrets module.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - ../../services
