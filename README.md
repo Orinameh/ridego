@@ -411,7 +411,7 @@ make k8s-dev-down
   with `GITHUB_TOKEN` default to private on GHCR — flip them public or add
   an `imagePullSecret`.
 - **Dependabot** (`.github/dependabot.yaml`) proposes one grouped Go-module
-  bump PR per week (a single PR keeps CI cost flat). Docker base images and
+  bump PR per month (a single PR keeps CI cost flat). Docker base images and
   action pins are bumped by hand when needed — CI validates both.
 
 ## Cloud deployment (optional, AWS)
